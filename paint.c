@@ -2,13 +2,18 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 
-#define  COLOR_PICKER_SIZE 30
+#define COLOR_PICKER_SIZE 30
+#define GOAL_FRAME_RATE 60 
 uint32_t hex_Colors[] = {
     0x000000, 0x808080, 0xFFFFFF, 0xFF0000, 0xA52A2A, 0xFFA500, 0xFFFF00, 0x008000,
     0x00FFFF, 0x0000FF, 0x800080, 0xFF00FF, 0x00FF00, 0xFFC0CB, 0x008080, 0x000080
 };
 int len = (int) (sizeof(hex_Colors) / sizeof(hex_Colors[0]));
 
+typedef struct last_paint {
+    int x, y;
+    int brush_size;
+} last_paint;
 
 int square(int x) {
     return x * x;
@@ -26,6 +31,16 @@ void paint_color_picker(SDL_Surface* surface) {
         color_x = 0;
     }
 }
+}
+
+void save_canvas(SDL_Surface* surface) {
+    SDL_SaveBMP(surface, "temp.bmp");
+}
+
+
+void load_canvas(SDL_Surface* destination_surface) {
+    SDL_Surface* source_surface = SDL_LoadBMP("temp.bmp");
+    SDL_BlitSurface(source_surface, NULL, destination_surface, NULL);
 }
 
 void select_color(int i, SDL_Surface* surface) {
@@ -62,6 +77,8 @@ int main() {
     int x, y;
     SDL_Event ev;
     int brush_size = 4;
+    bool lctrl = false;
+    bool rctrl = false;
     
     int32_t color;
     paint_color_picker(surface);
@@ -69,6 +86,18 @@ int main() {
     while (isRunning) {
         while(SDL_PollEvent(&ev) != 0) {
             switch (ev.type) {
+                case SDL_KEYDOWN:
+                    if (ev.key.keysym.sym == SDLK_z && (lctrl || rctrl)) {
+                        load_canvas(surface);
+                    }
+                    if (ev.key.keysym.sym == SDLK_LCTRL) lctrl = true;
+                    if (ev.key.keysym.sym == SDLK_RCTRL) rctrl = true;
+                    break;
+                case SDL_KEYUP:
+                    if (ev.key.keysym.sym == SDLK_LCTRL) lctrl = false;
+                    if (ev.key.keysym.sym == SDLK_RCTRL) rctrl = false;
+                    break;
+                
                 case SDL_QUIT:
                     isRunning = false;
                     break;
@@ -84,6 +113,7 @@ int main() {
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (ev.button.button == SDL_BUTTON_LEFT) {
+                        save_canvas(surface);
                         draw = true;
                         x = ev.motion.x;
                         y = ev.motion.y;
@@ -106,6 +136,7 @@ int main() {
             else draw_circle(x, y, brush_size, color, surface);
         }
         SDL_UpdateWindowSurface(window);
+        SDL_Delay(1000/GOAL_FRAME_RATE);
     }
     SDL_DestroyWindow(window);
     SDL_Quit();
