@@ -17,7 +17,7 @@ int main() {
     
     bool isRunning = true;
     bool draw = false;
-    int x, y;
+    int mouse_x_pos, mouse_y_pos, last_x_pos, last_y_pos;
     SDL_Event ev;
     int brush_size = 4;
     bool lctrl = false;
@@ -53,34 +53,39 @@ int main() {
                     change_brush_size(&brush_size, ev.wheel.y, ev.wheel.x);
                     break;
                 case SDL_MOUSEMOTION:
-                    x = ev.motion.x;
-                    y = ev.motion.y;
+                    mouse_x_pos = ev.motion.x;
+                    mouse_y_pos = ev.motion.y;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (ev.button.button == SDL_BUTTON_LEFT) {
                         draw = true;
-                        x = ev.motion.x;
-                        y = ev.motion.y;
+                        mouse_x_pos = ev.motion.x;
+                        mouse_y_pos = ev.motion.y;
+                        last_x_pos = mouse_x_pos;
+                        last_y_pos = mouse_y_pos;
                     }
                     break;
                 case SDL_MOUSEBUTTONUP:
                     if (ev.button.button == SDL_BUTTON_LEFT) {
-                        push_to_history(&hist, surface);
                         draw = false;
+                        if (!is_inside_palette(mouse_x_pos, mouse_y_pos)) push_to_history(&hist, surface);
                     }
                     break;
             }
            
         }
         if (draw) {
-            if (x < 8 * COLOR_PICKER_SIZE && y < (len / 8) * COLOR_PICKER_SIZE) {
-                int col = x / COLOR_PICKER_SIZE;
-                int line = y / COLOR_PICKER_SIZE;
+            if (is_inside_palette(mouse_x_pos, mouse_y_pos)) {
+                int col = mouse_x_pos / COLOR_PICKER_SIZE;
+                int line = mouse_y_pos / COLOR_PICKER_SIZE;
                 int i = line * 8 + col;
                 color = hex_Colors[i];
                 select_color(i, surface);
+            } else {
+                draw_line_of_circles(surface, last_x_pos, last_y_pos, mouse_x_pos, mouse_y_pos, brush_size, color);
+                last_x_pos = mouse_x_pos;
+                last_y_pos = mouse_y_pos;
             }
-            else draw_circle(x, y, brush_size, color, surface);
         }
         SDL_UpdateWindowSurface(window);
         SDL_Delay(1000/GOAL_FRAME_RATE);
